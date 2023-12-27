@@ -11,5 +11,21 @@ config_version=5
 [application]
 
 config/name="Godot Redux"
+run/main_scene="res://features/counter/scenes/counter.tscn"
 config/features=PackedStringArray("4.2", "Forward Plus")
+boot_splash/show_image=false
 config/icon="res://icon.svg"
+
+[autoload]
+
+Store="*res://features/store/scripts/store.gd"
+CounterConstants="*res://features/counter/constants/counter_constants.gd"
+CounterActions="*res://features/counter/actions/counter_actions.gd"
+CounterReducer="*res://features/counter/reducers/counter_reducer.gd"
+CounterMiddlewares="*res://features/counter/middlewares/counter_middlewares.gd"
+
+[display]
+
+window/size/viewport_width=960
+window/size/viewport_height=540
+window/stretch/mode="viewport"
