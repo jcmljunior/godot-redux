@@ -1,25 +1,25 @@
 extends Node
 
-func increment_counter(state: int, action: Dictionary) -> Dictionary:
+func increment_counter(state: int) -> Dictionary:
 	return {
-		"type": "",
+		"type": CounterConstants.INCREMENT_COUNTER,
 		"payload": {
-			"counter": state,
+			"counter": state+1,
 		}
 	}
 
-func decrement_counter(state: int, action: Dictionary) -> Dictionary:
+func decrement_counter(state: int) -> Dictionary:
 	return {
-		"type": "",
+		"type": CounterConstants.DECREMENT_COUNTER,
 		"payload": {
-			"counter": state,
+			"counter": state-1,
 		}
 	}
 
 func reset_counter(state: int, action: Dictionary) -> Dictionary:
 	return {
-		"type": "",
+		"type": CounterConstants.RESET_COUNTER,
 		"payload": {
-			"counter": state,
+			"counter": CounterReducers.initial_setup.get("state").get("counter"),
 		}
 	}

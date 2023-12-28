@@ -21,11 +21,15 @@ config/icon="res://icon.svg"
 Store="*res://features/store/scripts/store.gd"
 CounterConstants="*res://features/counter/constants/counter_constants.gd"
 CounterActions="*res://features/counter/actions/counter_actions.gd"
-CounterReducer="*res://features/counter/reducers/counter_reducer.gd"
+CounterReducers="*res://features/counter/reducers/counter_reducer.gd"
 CounterMiddlewares="*res://features/counter/middlewares/counter_middlewares.gd"
+PlayerConstants="*res://features/player/constants/player_constants.gd"
+PlayerActions="*res://features/player/actions/player_actions.gd"
+PlayerReducers="*res://features/player/reducers/player_reducers.gd"
+PlayerMiddlewares="*res://features/player/middlewares/player_middlewares.gd"
 
 [display]
 
-window/size/viewport_width=960
-window/size/viewport_height=540
+window/size/viewport_width=1366
+window/size/viewport_height=768
 window/stretch/mode="viewport"
