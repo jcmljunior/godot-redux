@@ -9,4 +9,9 @@
     },
     "peacock.color": "#d4e749",
     "godot_tools.gdscript_lsp_server_port": 6005,
+	"todo-tree.general.tags": [
+		"ERRO",
+		"CORRIGIR",
+		"PENDENTE",
+	]
 }
