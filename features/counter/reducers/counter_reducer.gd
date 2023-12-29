@@ -18,6 +18,11 @@ extends Node
 		},
 		{
 			"type": CounterConstants.DECREMENT_COUNTER,
+			"method": CounterMiddlewares.lock_decrement_counter,
+			"on": "ready",
+		},
+		{
+			"type": CounterConstants.DECREMENT_COUNTER,
 			"method": CounterMiddlewares.show_decrement_counter,
 			"on": "load",
 		},
