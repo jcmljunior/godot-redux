@@ -1,6 +1,6 @@
 extends Node
 
-signal changed_state_event_handler(target: String, method: Callable)
+#signal changed_state_event_handler(target: String, method: Callable)
 
 var state: Dictionary = {}
 var store: Dictionary = {}
@@ -109,7 +109,7 @@ func dispatch(action: Dictionary) -> void:
 		register_state.call()
 
 		# Notifica os observadores.
-		changed_state_event_handler.emit()
+		#changed_state_event_handler.emit()
 		if store.get(key).has("listeners"):
 			for index in range(store.get(key).get("listeners").size()):
 				store.get(key).get("listeners")[index].get("method").input_event_handler.emit()
