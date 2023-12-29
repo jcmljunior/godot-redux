@@ -27,9 +27,3 @@ PlayerConstants="*res://features/player/constants/player_constants.gd"
 PlayerActions="*res://features/player/actions/player_actions.gd"
 PlayerReducers="*res://features/player/reducers/player_reducers.gd"
 PlayerMiddlewares="*res://features/player/middlewares/player_middlewares.gd"
-
-[display]
-
-window/size/viewport_width=1366
-window/size/viewport_height=768
-window/stretch/mode="viewport"
