@@ -28,6 +28,14 @@ func create(obj: Dictionary) -> Store:
 
 # Essa função atualiza o estado com base em uma ação.
 func dispatch(action: Dictionary) -> void:
+	# Representa o estado da aplicação.
+	var running = true
+	
+	# Armazena a ação de atualização do estado.
+	# Usado para aplicar o registro do estado após a execução dos middlewares.
+	var register_state: Callable
+	
+	# Percorre todos os indices presente no store.
 	for key in store.keys():
 
 		# Pula para o proxímo indice se a relação entre
@@ -48,7 +56,7 @@ func dispatch(action: Dictionary) -> void:
 		if not current_state != next_state:
 			break
 
-		# Percorre os dados retornado para saber quais foram modificados.
+		# Armazena os valores de estado modificado.
 		var changed_state: Array = [];
 		
 		if typeof(current_state) == TYPE_STRING \
@@ -60,8 +68,9 @@ func dispatch(action: Dictionary) -> void:
 					next_state,
 				])
 				
-				# Registra as modificações de estado.
-				state[key] = next_state
+				# Registra as modificações no estado.
+				register_state = func():
+					state[key] = next_state
 		
 		elif typeof(current_state) == TYPE_DICTIONARY:
 			for index in next_state.keys():
@@ -73,19 +82,31 @@ func dispatch(action: Dictionary) -> void:
 					next_state.get(index),
 				])
 				
-				# Registra as modificações de estado.
-				state[key] = shallow_merge(next_state, current_state)
+				# Registra as modificações no estado.
+				register_state = func():
+					state[key] = shallow_merge(next_state, current_state)
 
-		# Executa o loop para execução dos observadores.
-		var response: Callable;
+		# Armazena o retorno de cada middleware. 
+		var response: bool;
+		
+		# Executa o laço para execução dos observadores.
 		for middleware in get_middlewares_with_key_value("on", "ready", store.get(key).get("middlewares")):
 			if middleware.get("type") != action.get("type"):
 				continue
 
 			response = middleware.get("method").call(changed_state)
-			response.call()
-
+			
+			# Bloqueia a continuação do código se o retorno for falso.
+			if not response:
+				running = false
+				break
+		
+		# Bloqueia a execução do código se o valor de running for falso.
+		if not running:
 			break
+		
+		# Registra o novo estado.
+		register_state.call()
 
 		# Notifica os observadores.
 		changed_state_event_handler.emit()
@@ -99,13 +120,16 @@ func dispatch(action: Dictionary) -> void:
 				continue
 
 			response = middleware.get("method").call(changed_state)
-			response.call()
+			
+			# Bloqueia a continuação do código se o retorno for falso.
+			if not response:
+				running = false
+				break
+			
 			break
 
-		# Finaliza o loop for.
+		# Finaliza o laço for.
 		break
-
-	pass
 
 # Inscrição para ouvir modificações de estado de um único objeto.
 func subscribe(key: String, method: Callable, connect_type: ConnectFlags) -> void:
@@ -116,6 +140,7 @@ func subscribe(key: String, method: Callable, connect_type: ConnectFlags) -> voi
 		"method": StoreUtils.new(method, connect_type)
 	})
 
+# TODO Essa função precisa ser refatorada.
 func unsubscribe(key: String, method: Callable) -> void:
 	var method_name: String = str(method).split("::")[1]
 	var response: Array = [];
