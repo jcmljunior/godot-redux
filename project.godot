@@ -27,3 +27,7 @@ PlayerConstants="*res://features/player/constants/player_constants.gd"
 PlayerActions="*res://features/player/actions/player_actions.gd"
 PlayerReducers="*res://features/player/reducers/player_reducers.gd"
 PlayerMiddlewares="*res://features/player/middlewares/player_middlewares.gd"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/Todo_Manager/plugin.cfg", "res://addons/gut/plugin.cfg")
