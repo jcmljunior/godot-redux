@@ -28,6 +28,9 @@ func create(obj: Dictionary) -> Store:
 
 # Essa função atualiza o estado com base em uma ação.
 func dispatch(action: Dictionary) -> void:
+	var running = true
+	var register_state: Callable
+	
 	for key in store.keys():
 
 		# Pula para o proxímo indice se a relação entre
@@ -61,7 +64,10 @@ func dispatch(action: Dictionary) -> void:
 				])
 				
 				# Registra as modificações de estado.
-				state[key] = next_state
+				#state[key] = next_state
+				
+				register_state = func():
+					state[key] = next_state
 		
 		elif typeof(current_state) == TYPE_DICTIONARY:
 			for index in next_state.keys():
@@ -74,18 +80,26 @@ func dispatch(action: Dictionary) -> void:
 				])
 				
 				# Registra as modificações de estado.
-				state[key] = shallow_merge(next_state, current_state)
+				register_state = func():
+					state[key] = shallow_merge(next_state, current_state)
 
 		# Executa o loop para execução dos observadores.
-		var response: Callable;
+		var response: bool;
 		for middleware in get_middlewares_with_key_value("on", "ready", store.get(key).get("middlewares")):
 			if middleware.get("type") != action.get("type"):
 				continue
 
 			response = middleware.get("method").call(changed_state)
-			response.call()
-
+			
+			if not response:
+				running = false
+				break
+		
+		# Bloqueia a execução
+		if not running:
 			break
+
+		register_state.call()
 
 		# Notifica os observadores.
 		changed_state_event_handler.emit()
@@ -99,13 +113,15 @@ func dispatch(action: Dictionary) -> void:
 				continue
 
 			response = middleware.get("method").call(changed_state)
-			response.call()
+			
+			if not response:
+				running = false
+				break
+			
 			break
 
 		# Finaliza o loop for.
 		break
-
-	pass
 
 # Inscrição para ouvir modificações de estado de um único objeto.
 func subscribe(key: String, method: Callable, connect_type: ConnectFlags) -> void:
