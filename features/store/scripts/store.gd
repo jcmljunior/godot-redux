@@ -69,7 +69,7 @@ func dispatch(action: Dictionary) -> void:
 					])
 				
 				# Registra as modificações no estado.
-				response = func():
+				response = func() -> void:
 					state[key] = shallow_merge(next_state, current_state)
 			
 			_:
@@ -78,7 +78,7 @@ func dispatch(action: Dictionary) -> void:
 					next_state,
 				])
 				
-				response = func():
+				response = func() -> void:
 					state[key] = next_state
 		
 		
@@ -107,8 +107,7 @@ func dispatch(action: Dictionary) -> void:
 			break
 		
 		for index in range(store.get(key).get("listeners").size()):
-			store.get(key).get("listeners")[index].get("method").input_event_handler.emit()
-
+			store.get(key).get("listeners")[index][1].input_event_handler.emit()
 
 		# Inicialização dos middlewares do tipo "load".
 		for middleware in get_middlewares_with_key_value("on", "load", store.get(key).get("middlewares")):
@@ -129,25 +128,25 @@ func dispatch(action: Dictionary) -> void:
 
 # Inscrição para ouvir modificações de estado de um único objeto.
 func subscribe(key: String, method: Callable, connect_type: ConnectFlags) -> void:
-	var method_name: String = str(method).split("::")[1]
+	assert(key in store, "")
+	assert("listeners" in store.get(key), "")
+	
+	store.get(key).get("listeners").append([
+		str(method).split("::")[1],
+		StoreUtils.new(method, connect_type)
+	])
 
-	store.get(key).get("listeners").append({
-		"name": method_name,
-		"method": StoreUtils.new(method, connect_type)
-	})
-
-# TODO Essa função precisa ser refatorada.
 func unsubscribe(key: String, method: Callable) -> void:
-	var method_name: String = str(method).split("::")[1]
-	var response: Array = [];
-
+	var method_name := str(method).split("::")[1]
+	
 	for index in range(store.get(key).get("listeners").size()):
-		if store.get(key).get("listeners")[index].get("name") == method_name:
+		if store.get(key).get("listeners")[index][0] != method_name:
 			continue
 
-		response.append(store.get(key).get("listeners")[index])
-
-	store[key]["listeners"] = response
+		store.get(key).get("listeners").pop_at(index)
+		
+		# Finaliza o laço.
+		break
 
 
 # Esta função classifica os middlewares com base no valor de uma chave específica.
