@@ -3,6 +3,7 @@ extends Node
 var state: Dictionary = {}
 var store: Dictionary = {}
 var running := true
+var response: Callable
 
 # Essa função cria um estado global com base em um redutor de estado.
 func create(obj: Dictionary) -> Store:
@@ -31,8 +32,6 @@ func dispatch(action: Dictionary) -> void:
 	# Inicializa a variavel running sempre que uma ação é executada.
 	running = true
 	
-	var response: Callable
-	
 	for key in store.keys():
 		# Executa a validação da relação da ação com o redutor.
 		if not key in action.get("payload"):
@@ -57,33 +56,7 @@ func dispatch(action: Dictionary) -> void:
 				break
 		
 		# Memoriza as informações de estados modificado.
-		var changed_state: Array = []
-		
-		match(typeof(next_state)):
-			TYPE_DICTIONARY:
-				for index in next_state:
-					if not index in current_state and \
-						next_state[index] == current_state[index]:
-							continue
-
-					changed_state.append([
-						current_state[index],
-						next_state[index],
-					])
-				
-				# Registra as modificações no estado.
-				response = func() -> void:
-					state[key] = shallow_merge(next_state, current_state)
-			
-			_:
-				changed_state.append([
-					current_state,
-					next_state,
-				])
-				
-				response = func() -> void:
-					state[key] = next_state
-		
+		var changed_state: Array = handle_changed_state(key, current_state, next_state)
 		
 		# Inicialização dos middlewares do tipo "ready".
 		if not "middlewares" in store.get(key):
@@ -168,6 +141,38 @@ func handle_middleware(action: Dictionary, resources: Array, changed_state: Arra
 func handle_listeners(key: String):
 	for index in range(store.get(key).get("listeners").size()):
 		store.get(key).get("listeners")[index][1].input_event_handler.emit()
+
+
+# Memoriza as informações de estados modificado.
+func handle_changed_state(key: String, current_state: Variant, next_state: Variant) -> Array:
+	var changed_state: Array = []
+	
+	match(typeof(next_state)):
+		TYPE_DICTIONARY:
+			for index in next_state:
+				if not index in current_state and \
+					next_state[index] == current_state[index]:
+						continue
+
+				changed_state.append([
+					current_state[index],
+					next_state[index],
+				])
+			
+			# Registra as modificações no estado.
+			response = func() -> void:
+				state[key] = shallow_merge(next_state, current_state)
+		
+		_:
+			changed_state.append([
+				current_state,
+				next_state,
+			])
+			
+			response = func() -> void:
+				state[key] = next_state
+	
+	return changed_state
 
 # Esta função recupera um valor associado a uma chave específica no state
 func get_entry_on_state(key: String) -> Variant:
