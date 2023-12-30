@@ -2,7 +2,6 @@ extends Node
 
 var state: Dictionary = {}
 var store: Dictionary = {}
-
 var running := true
 
 # Essa função cria um estado global com base em um redutor de estado.
@@ -29,7 +28,9 @@ func create(obj: Dictionary) -> Store:
 
 # Essa função atualiza o estado com base em uma ação.
 func dispatch(action: Dictionary) -> void:
+	# Inicializa a variavel running sempre que uma ação é executada.
 	running = true
+	
 	var response: Callable
 	
 	for key in store.keys():
@@ -100,9 +101,8 @@ func dispatch(action: Dictionary) -> void:
 		# Notifica os observadores.
 		if not "listeners" in store.get(key):
 			break
-		
-		for index in range(store.get(key).get("listeners").size()):
-			store.get(key).get("listeners")[index][1].input_event_handler.emit()
+
+		handle_listeners(key)
 
 		# Inicialização dos middlewares do tipo "load".
 		handle_middleware(action, get_middlewares_with_key_value("on", "load", store.get(key).get("middlewares")), changed_state)
@@ -153,8 +153,8 @@ func get_middlewares_with_key_value(key: String, value: String, data: Array) -> 
 
 	return response
 
+# Inicialização dos middlewares.
 func handle_middleware(action: Dictionary, resources: Array, changed_state: Array):
-	# Inicialização dos middlewares do tipo "load".
 	for middleware in resources:
 		if middleware.get("type") != action.get("type"):
 			continue
@@ -163,6 +163,11 @@ func handle_middleware(action: Dictionary, resources: Array, changed_state: Arra
 		if not middleware.get("method").call(changed_state):
 			running = false
 			break
+
+# Notifica os observadores relacionados a chave.
+func handle_listeners(key: String):
+	for index in range(store.get(key).get("listeners").size()):
+		store.get(key).get("listeners")[index][1].input_event_handler.emit()
 
 # Esta função recupera um valor associado a uma chave específica no state
 func get_entry_on_state(key: String) -> Variant:
