@@ -3,6 +3,8 @@ extends Node
 var state: Dictionary = {}
 var store: Dictionary = {}
 
+var running := true
+
 # Essa função cria um estado global com base em um redutor de estado.
 func create(obj: Dictionary) -> Store:
 	assert("state" in obj, "Oppss, não foi encontrado o estado inicial.")
@@ -27,7 +29,7 @@ func create(obj: Dictionary) -> Store:
 
 # Essa função atualiza o estado com base em uma ação.
 func dispatch(action: Dictionary) -> void:
-	var running := true
+	running = true
 	var response: Callable
 	
 	for key in store.keys():
@@ -86,14 +88,7 @@ func dispatch(action: Dictionary) -> void:
 		if not "middlewares" in store.get(key):
 			break
 		
-		for middleware in get_middlewares_with_key_value("on", "ready", store.get(key).get("middlewares")):
-			if middleware.get("type") != action.get("type"):
-				continue
-			
-			# Executa o middleware e se a resposta não for verdadeira, bloqueia a continuação do código.
-			if not middleware.get("method").call(changed_state):
-				running = false
-				break
+		handle_middleware(action, get_middlewares_with_key_value("on", "ready", store.get(key).get("middlewares")), changed_state)
 		
 		# Bloqueia a a continuação do laço se a variavel running for falsa.
 		if not running:
@@ -110,14 +105,7 @@ func dispatch(action: Dictionary) -> void:
 			store.get(key).get("listeners")[index][1].input_event_handler.emit()
 
 		# Inicialização dos middlewares do tipo "load".
-		for middleware in get_middlewares_with_key_value("on", "load", store.get(key).get("middlewares")):
-			if middleware.get("type") != action.get("type"):
-				continue
-			
-			# Executa o middleware e se a resposta não for verdadeira, bloqueia a continuação do código.
-			if not middleware.get("method").call(changed_state):
-				running = false
-				break
+		handle_middleware(action, get_middlewares_with_key_value("on", "load", store.get(key).get("middlewares")), changed_state)
 		
 		# Bloqueia a a continuação do laço se a variavel running for falsa.
 		if not running:
@@ -127,7 +115,7 @@ func dispatch(action: Dictionary) -> void:
 		break
 
 # Inscrição para ouvir modificações de estado.
-func subscribe(key: String, method: Callable, connect_type: ConnectFlags) -> void:
+func subscribe(key: String, method: Callable, connect_type: ConnectFlags) -> Store:
 	assert(key in store, "Oppss, a chave %s não foi encontrada." % key)
 	assert("listeners" in store.get(key), "Oppss, a chave listeners não foi encontrada.")
 	
@@ -135,9 +123,11 @@ func subscribe(key: String, method: Callable, connect_type: ConnectFlags) -> voi
 		str(method).split("::")[1],
 		StoreUtils.new(method, connect_type)
 	])
+	
+	return self
 
 # Remoção da escuta das modificações de estado.
-func unsubscribe(key: String, method: Callable) -> void:
+func unsubscribe(key: String, method: Callable) -> Store:
 	var method_name := str(method).split("::")[1]
 	
 	for index in range(store.get(key).get("listeners").size()):
@@ -148,7 +138,8 @@ func unsubscribe(key: String, method: Callable) -> void:
 		
 		# Finaliza o laço.
 		break
-
+	
+	return self
 
 # Esta função classifica os middlewares com base no valor de uma chave específica.
 func get_middlewares_with_key_value(key: String, value: String, data: Array) -> Array:
@@ -162,6 +153,16 @@ func get_middlewares_with_key_value(key: String, value: String, data: Array) -> 
 
 	return response
 
+func handle_middleware(action: Dictionary, resources: Array, changed_state: Array):
+	# Inicialização dos middlewares do tipo "load".
+	for middleware in resources:
+		if middleware.get("type") != action.get("type"):
+			continue
+		
+		# Executa o middleware e se a resposta não for verdadeira, bloqueia a continuação do código.
+		if not middleware.get("method").call(changed_state):
+			running = false
+			break
 
 # Esta função recupera um valor associado a uma chave específica no state
 func get_entry_on_state(key: String) -> Variant:

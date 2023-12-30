@@ -9,8 +9,9 @@ func _ready() -> void:
 		.create(CounterReducers.initial_setup) \
 		.create(PlayerReducers.initial_setup)
 	
-	Store.subscribe("counter", _on_update_counter, CONNECT_PERSIST)
-	Store.subscribe("player", _on_update_player, CONNECT_PERSIST)
+	Store \
+		.subscribe("counter", _on_update_counter, CONNECT_PERSIST) \
+		.subscribe("player", _on_update_player, CONNECT_PERSIST)
 
 
 func _on_update_counter():
@@ -37,3 +38,7 @@ func _on_generate_player_button_pressed():
 	
 	Store.dispatch(PlayerActions.player_set_name(player.get("name")))
 	Store.dispatch(PlayerActions.player_set_age(player.get("age")))
+
+
+func _on_reset_button_pressed():
+	print("...")

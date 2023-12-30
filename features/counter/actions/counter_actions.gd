@@ -20,6 +20,6 @@ func reset_counter(state: int, action: Dictionary) -> Dictionary:
 	return {
 		"type": CounterConstants.RESET_COUNTER,
 		"payload": {
-			"counter": CounterReducers.initial_setup.get("state").get("counter"),
+			"counter": state,
 		}
 	}

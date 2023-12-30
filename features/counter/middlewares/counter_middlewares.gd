@@ -17,7 +17,6 @@ func show_decrement_counter(state: Array) -> bool:
 	return true
 
 func lock_decrement_counter(state: Array) -> bool:
-	var initial_state: Variant = state[0][0]
 	var next_state: Variant = state[0][1]
 	
 	if next_state < 0:
