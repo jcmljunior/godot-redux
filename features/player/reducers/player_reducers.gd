@@ -3,7 +3,7 @@ extends Node
 @onready var initial_setup: Dictionary = {
 	"state": {
 		"player": {
-			"name": "\"\"",
+			"name": "",
 			"age": 0,
 		},
 	},
