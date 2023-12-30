@@ -1,157 +1,153 @@
 extends Node
 
-signal changed_state_event_handler(target: String, method: Callable)
-
 var state: Dictionary = {}
 var store: Dictionary = {}
 
 # Essa função cria um estado global com base em um redutor de estado.
 func create(obj: Dictionary) -> Store:
-	assert(obj.has("state"), "Oppss, não foi encontrado o estado inicial.")
+	assert("state" in obj, "Oppss, não foi encontrado o estado inicial.")
 	assert(obj.get("state").size() == 1, "Oppss, foram declarados mais de uma chave de estado global.")
 
 	# Obtem a chave de refêrencia ao estado global.
 	var key: String = obj.get("state").keys()[0]
 	var response: Dictionary;
 
-	assert( not store.has(key), "Oppss, a chave %s já encontra-se em uso." % key)
-	assert( not state.has(key), "Oppss, a chave %s já encontra-se em uso." % key)
+	assert(not key in store, "Oppss, a chave %s já encontra-se em uso." % key)
+	assert(not key in state, "Oppss, a chave %s já encontra-se em uso." % key)
+	
 	store[key] = obj
 
 	# Inicialização de estado.
 	response = store.get(key).get("method").call(store.get(key).get("state").get(key), {})
 
-	assert(response.has("payload"), "Oppss, a resposta do redutor não retornou o objeto payload.")
+	assert("payload" in response, "Oppss, a resposta do redutor não retornou o objeto payload.")
 	state[key] = response.get("payload").get(key)
 
 	return self
 
 # Essa função atualiza o estado com base em uma ação.
 func dispatch(action: Dictionary) -> void:
-	# Representa o estado da aplicação.
-	var running = true
+	var running := true
+	var response: Callable
 	
-	# Armazena a ação de atualização do estado.
-	# Usado para aplicar o registro do estado após a execução dos middlewares.
-	var register_state: Callable
-	
-	# Percorre todos os indices presente no store.
 	for key in store.keys():
-
-		# Pula para o proxímo indice se a relação entre
-		# ação e redutor não for estabelecida.
-		if not action.get("payload").has(key):
+		# Executa a validação da relação da ação com o redutor.
+		if not key in action.get("payload"):
 			continue
-
-		# Bloqueia a execução do redutor se a ação não
-		# for um método autorizado.
-		if not store.get(key).get("accept_action").has(action.get("type")):
-			break
-
-		# Executa o modificador de estado.
-		var current_state: Variant = state.get(key)
-		var next_state: Variant = store.get(key).get("method").call(current_state, action).get("payload").get(key)
-
-		# Bloqueia o loop for se não houver mudanças de estado.
-		if not current_state != next_state:
-			break
-
-		# Armazena os valores de estado modificado.
-		var changed_state: Array = [];
 		
-		if typeof(current_state) == TYPE_STRING \
-			or typeof(current_state) == TYPE_INT \
-			or typeof(current_state) == TYPE_ARRAY \
-			or typeof(current_state) == TYPE_FLOAT:
+		# Executa a validação da autorização de execução do redutor.
+		# Bloqueia a execução do código se as condições necessárias para continuar não for estabelecidas.
+		if not action.get("type") in store.get(key).get("accept_action"):
+			break
+		
+		# Executa uma simulação de modificações de estado.
+		var current_state: Variant = state.get(key)
+		var next_state: Variant = store.get(key).get("method").call(current_state, action)
+		
+		# Normalização do novo estado.
+		next_state = next_state.get("payload").get(key)
+		
+		# Validação de estado passivo a modificação.
+		# Bloqueia a execução do código se não houver alterações de estado.
+		if not typeof(current_state) == typeof(next_state) \
+			and current_state == next_state:
+				break
+		
+		# Memoriza as informações de estados modificado.
+		var changed_state: Array = []
+		
+		match(typeof(next_state)):
+			TYPE_DICTIONARY:
+				for index in next_state:
+					if not index in current_state and \
+						next_state[index] == current_state[index]:
+							continue
+
+					changed_state.append([
+						current_state[index],
+						next_state[index],
+					])
+				
+				# Registra as modificações no estado.
+				response = func() -> void:
+					state[key] = shallow_merge(next_state, current_state)
+			
+			_:
 				changed_state.append([
 					current_state,
 					next_state,
 				])
 				
-				# Registra as modificações no estado.
-				register_state = func():
+				response = func() -> void:
 					state[key] = next_state
 		
-		elif typeof(current_state) == TYPE_DICTIONARY:
-			for index in next_state.keys():
-				if not current_state.has(index):
-					continue
-					
-				changed_state.append([
-					current_state.get(index),
-					next_state.get(index),
-				])
-				
-				# Registra as modificações no estado.
-				register_state = func():
-					state[key] = shallow_merge(next_state, current_state)
-
-		# Armazena o retorno de cada middleware. 
-		var response: bool;
 		
-		# Executa o laço para execução dos observadores.
+		# Inicialização dos middlewares do tipo "ready".
+		if not "middlewares" in store.get(key):
+			break
+		
 		for middleware in get_middlewares_with_key_value("on", "ready", store.get(key).get("middlewares")):
 			if middleware.get("type") != action.get("type"):
 				continue
-
-			response = middleware.get("method").call(changed_state)
 			
-			# Bloqueia a continuação do código se o retorno for falso.
-			if not response:
+			# Executa o middleware e se a resposta não for verdadeira, bloqueia a continuação do código.
+			if not middleware.get("method").call(changed_state):
 				running = false
 				break
 		
-		# Bloqueia a execução do código se o valor de running for falso.
+		# Bloqueia a a continuação do laço se a variavel running for falsa.
 		if not running:
 			break
-		
-		# Registra o novo estado.
-		register_state.call()
+
+		# Se não houver problemas, registra o novo estado.
+		response.call()
 
 		# Notifica os observadores.
-		changed_state_event_handler.emit()
-		if store.get(key).has("listeners"):
-			for index in range(store.get(key).get("listeners").size()):
-				store.get(key).get("listeners")[index].get("method").input_event_handler.emit()
+		if not "listeners" in store.get(key):
+			break
+		
+		for index in range(store.get(key).get("listeners").size()):
+			store.get(key).get("listeners")[index][1].input_event_handler.emit()
 
-		# Executa o loop para execução dos observadores.
+		# Inicialização dos middlewares do tipo "load".
 		for middleware in get_middlewares_with_key_value("on", "load", store.get(key).get("middlewares")):
 			if middleware.get("type") != action.get("type"):
 				continue
-
-			response = middleware.get("method").call(changed_state)
 			
-			# Bloqueia a continuação do código se o retorno for falso.
-			if not response:
+			# Executa o middleware e se a resposta não for verdadeira, bloqueia a continuação do código.
+			if not middleware.get("method").call(changed_state):
 				running = false
 				break
-			
+		
+		# Bloqueia a a continuação do laço se a variavel running for falsa.
+		if not running:
 			break
-
+		
 		# Finaliza o laço for.
 		break
 
-# Inscrição para ouvir modificações de estado de um único objeto.
+# Inscrição para ouvir modificações de estado.
 func subscribe(key: String, method: Callable, connect_type: ConnectFlags) -> void:
-	var method_name: String = str(method).split("::")[1]
+	assert(key in store, "Oppss, a chave %s não foi encontrada." % key)
+	assert("listeners" in store.get(key), "Oppss, a chave listeners não foi encontrada.")
+	
+	store.get(key).get("listeners").append([
+		str(method).split("::")[1],
+		StoreUtils.new(method, connect_type)
+	])
 
-	store.get(key).get("listeners").append({
-		"name": method_name,
-		"method": StoreUtils.new(method, connect_type)
-	})
-
-# TODO Essa função precisa ser refatorada.
+# Remoção da escuta das modificações de estado.
 func unsubscribe(key: String, method: Callable) -> void:
-	var method_name: String = str(method).split("::")[1]
-	var response: Array = [];
-
+	var method_name := str(method).split("::")[1]
+	
 	for index in range(store.get(key).get("listeners").size()):
-		if store.get(key).get("listeners")[index].get("name") == method_name:
+		if store.get(key).get("listeners")[index][0] != method_name:
 			continue
 
-		response.append(store.get(key).get("listeners")[index])
-
-	store[key]["listeners"] = response
+		store.get(key).get("listeners").pop_at(index)
+		
+		# Finaliza o laço.
+		break
 
 
 # Esta função classifica os middlewares com base no valor de uma chave específica.
