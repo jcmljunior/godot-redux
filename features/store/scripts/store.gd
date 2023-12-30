@@ -126,16 +126,17 @@ func dispatch(action: Dictionary) -> void:
 		# Finaliza o laço for.
 		break
 
-# Inscrição para ouvir modificações de estado de um único objeto.
+# Inscrição para ouvir modificações de estado.
 func subscribe(key: String, method: Callable, connect_type: ConnectFlags) -> void:
-	assert(key in store, "")
-	assert("listeners" in store.get(key), "")
+	assert(key in store, "Oppss, a chave %s não foi encontrada." % key)
+	assert("listeners" in store.get(key), "Oppss, a chave listeners não foi encontrada.")
 	
 	store.get(key).get("listeners").append([
 		str(method).split("::")[1],
 		StoreUtils.new(method, connect_type)
 	])
 
+# Remoção da escuta das modificações de estado.
 func unsubscribe(key: String, method: Callable) -> void:
 	var method_name := str(method).split("::")[1]
 	
