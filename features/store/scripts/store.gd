@@ -3,7 +3,6 @@ extends Node
 var state: Dictionary = {}
 var store: Dictionary = {}
 var running := true
-var response: Callable
 
 # Essa função cria um estado global com base em um redutor de estado.
 func create(obj: Dictionary) -> Store:
@@ -56,20 +55,20 @@ func dispatch(action: Dictionary) -> void:
 				break
 		
 		# Memoriza as informações de estados modificado.
-		var changed_state: Array = handle_changed_state(key, current_state, next_state)
+		var changed_state: Dictionary = handle_changed_state(key, current_state, next_state)
 		
 		# Inicialização dos middlewares do tipo "ready".
 		if not "middlewares" in store.get(key):
 			break
 		
-		handle_middleware(action, get_middlewares_with_key_value("on", "ready", store.get(key).get("middlewares")), changed_state)
+		handle_middleware(action, get_middlewares_with_key_value("on", "ready", store.get(key).get("middlewares")), changed_state.values)
 		
 		# Bloqueia a a continuação do laço se a variavel running for falsa.
 		if not running:
 			break
 
 		# Se não houver problemas, registra o novo estado.
-		response.call()
+		changed_state.callback.call()
 
 		# Notifica os observadores.
 		if not "listeners" in store.get(key):
@@ -78,7 +77,7 @@ func dispatch(action: Dictionary) -> void:
 		handle_listeners(key)
 
 		# Inicialização dos middlewares do tipo "load".
-		handle_middleware(action, get_middlewares_with_key_value("on", "load", store.get(key).get("middlewares")), changed_state)
+		handle_middleware(action, get_middlewares_with_key_value("on", "load", store.get(key).get("middlewares")), changed_state.values)
 		
 		# Bloqueia a a continuação do laço se a variavel running for falsa.
 		if not running:
@@ -144,8 +143,9 @@ func handle_listeners(key: String):
 
 
 # Memoriza as informações de estados modificado.
-func handle_changed_state(key: String, current_state: Variant, next_state: Variant) -> Array:
+func handle_changed_state(key: String, current_state: Variant, next_state: Variant) -> Dictionary:
 	var changed_state: Array = []
+	var response: Callable
 	
 	match(typeof(next_state)):
 		TYPE_DICTIONARY:
@@ -172,7 +172,10 @@ func handle_changed_state(key: String, current_state: Variant, next_state: Varia
 			response = func() -> void:
 				state[key] = next_state
 	
-	return changed_state
+	return {
+		"values": changed_state,
+		"callback": response,
+	}
 
 # Esta função recupera um valor associado a uma chave específica no state
 func get_entry_on_state(key: String) -> Variant:
