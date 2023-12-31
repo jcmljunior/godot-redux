@@ -27,6 +27,7 @@ PlayerConstants="*res://features/player/constants/player_constants.gd"
 PlayerActions="*res://features/player/actions/player_actions.gd"
 PlayerReducers="*res://features/player/reducers/player_reducers.gd"
 PlayerMiddlewares="*res://features/player/middlewares/player_middlewares.gd"
+PlayerUtils="*res://features/player/scripts/player_utils.gd"
 
 [editor_plugins]
 

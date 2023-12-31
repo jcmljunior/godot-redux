@@ -4,7 +4,7 @@ func increment_counter(state: int) -> Dictionary:
 	return {
 		"type": CounterConstants.INCREMENT_COUNTER,
 		"payload": {
-			"counter": state+1,
+			"counter": state,
 		}
 	}
 
@@ -12,7 +12,7 @@ func decrement_counter(state: int) -> Dictionary:
 	return {
 		"type": CounterConstants.DECREMENT_COUNTER,
 		"payload": {
-			"counter": state-1,
+			"counter": state,
 		}
 	}
 

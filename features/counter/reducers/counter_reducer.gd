@@ -32,10 +32,10 @@ extends Node
 func counter_reducer(state: int, action: Dictionary) -> Dictionary:
 	match (action.get("type")):
 		CounterConstants.INCREMENT_COUNTER:
-			return CounterActions.increment_counter(state)
+			return CounterActions.increment_counter(state+1)
 		
 		CounterConstants.DECREMENT_COUNTER:
-			return CounterActions.decrement_counter(state)
+			return CounterActions.decrement_counter(state-1)
 		
 		_:
 			return {

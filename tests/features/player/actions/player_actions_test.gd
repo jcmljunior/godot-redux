@@ -28,7 +28,7 @@ class TestPlayerActions:
 		
 		# Validação da resposta.
 		assert_typeof(response.get("payload").get("player").get("name"), TYPE_STRING)
-		assert_true(response.get("payload").get("player").get("name") != "")
+		assert_true(response.get("payload").get("player").get("name") in PlayerUtils.player_names)
 		
 	
 	func test_player_set_age():
@@ -45,3 +45,4 @@ class TestPlayerActions:
 		
 		# Validação da resposta.
 		assert_typeof(response.get("payload").get("player").get("age"), TYPE_INT)
+		assert_true(response.get("payload").get("player").get("age") > mock_player_age.get("player").get("age"))
