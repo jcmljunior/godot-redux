@@ -28,21 +28,16 @@ extends Node
 }
 
 func player_reducer(state: Dictionary, action: Dictionary) -> Dictionary:
+	var new_state = Store.shallow_copy(state)
+	
 	match(action.get("type")):
 		PlayerConstants.PLAYER_SET_NAME:
-			return PlayerActions.player_set_name(
-				PlayerUtils.generate_player_name()
-			)
+			new_state["name"] = PlayerActions.player_set_name(state.get("name")).get("payload").get("player").get("name")
+			return new_state
 		
 		PlayerConstants.PLAYER_SET_AGE:
-			return PlayerActions.player_set_age(
-				PlayerUtils.generate_player_age()
-			)
+			new_state["age"] = PlayerActions.player_set_age(state.get("age")).get("payload").get("player").get("age")
+			return new_state
 		
 		_:
-			return {
-				"type": "",
-				"payload": {
-					"player": state,
-				}
-			}
+			return state

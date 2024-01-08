@@ -11,7 +11,6 @@ func create(obj: Dictionary) -> Store:
 
 	# Obtem a chave de refêrencia ao estado global.
 	var key: String = obj.get("state").keys()[0]
-	var response: Dictionary;
 
 	assert(not key in store, "Oppss, a chave %s já encontra-se em uso." % key)
 	assert(not key in state, "Oppss, a chave %s já encontra-se em uso." % key)
@@ -19,10 +18,7 @@ func create(obj: Dictionary) -> Store:
 	store[key] = obj
 
 	# Inicialização de estado.
-	response = store.get(key).get("method").call(store.get(key).get("state").get(key), {})
-
-	assert("payload" in response, "Oppss, a resposta do redutor não retornou o objeto payload.")
-	state[key] = response.get("payload").get(key)
+	state[key] = store.get(key).get("method").call(store.get(key).get("state").get(key), {})
 
 	return self
 
@@ -44,9 +40,6 @@ func dispatch(action: Dictionary) -> void:
 		# Executa uma simulação de modificações de estado.
 		var current_state: Variant = state.get(key)
 		var next_state: Variant = store.get(key).get("method").call(current_state, action)
-		
-		# Normalização do novo estado.
-		next_state = next_state.get("payload").get(key)
 		
 		# Validação de estado passivo a modificação.
 		# Bloqueia a execução do código se não houver alterações de estado.

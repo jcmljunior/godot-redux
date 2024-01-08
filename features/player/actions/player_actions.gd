@@ -1,21 +1,21 @@
 extends Node
 
-func player_set_name(state: String) -> Dictionary:
+func player_set_name(_state: String) -> Dictionary:
 	return {
 		"type": PlayerConstants.PLAYER_SET_NAME,
 		"payload": {
 			"player": {
-				"name": state,
+				"name": PlayerUtils.generate_player_name(),
 			}
 		}
 	}
 
-func player_set_age(state: int) -> Dictionary:
+func player_set_age(_state: int) -> Dictionary:
 	return {
 		"type": PlayerConstants.PLAYER_SET_AGE,
 		"payload": {
 			"player": {
-				"age": state,
+				"age": PlayerUtils.generate_player_age(),
 			}
 		}
 	}

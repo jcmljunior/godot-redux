@@ -39,6 +39,3 @@ func _on_generate_player_button_pressed():
 	Store.dispatch(PlayerActions.player_set_name(player.get("name")))
 	Store.dispatch(PlayerActions.player_set_age(player.get("age")))
 
-
-func _on_reset_button_pressed():
-	print("...")

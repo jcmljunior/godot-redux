@@ -29,18 +29,15 @@ extends Node
 	],
 }
 
-func counter_reducer(state: int, action: Dictionary) -> Dictionary:
+func counter_reducer(state: int, action: Dictionary) -> int:
 	match (action.get("type")):
 		CounterConstants.INCREMENT_COUNTER:
-			return CounterActions.increment_counter(state+1)
+			var response: Dictionary = CounterActions.increment_counter(state)
+			return response.get("payload").get("counter")
 		
 		CounterConstants.DECREMENT_COUNTER:
-			return CounterActions.decrement_counter(state-1)
+			var response: Dictionary = CounterActions.decrement_counter(state)
+			return response.get("payload").get("counter")
 		
 		_:
-			return {
-				"type": "",
-				"payload": {
-					"counter": state,
-				}
-			}
+			return state
