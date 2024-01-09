@@ -8,9 +8,7 @@ func get_state() -> Dictionary:
 
 func register(setup: Dictionary) -> Store:
 	# Bloqueia a continuação do código se não existir as chaves necessária para continuar.
-	if not "state" in setup \
-		or not "method" in setup:
-			return
+	if not "state" in setup or not "method" in setup: return
 	
 	# Estabelece a relação de chave com base na nomenclatura do redutor.
 	var name = setup.get("method").get_method()
@@ -39,8 +37,7 @@ func dispatch(actions: Array[Dictionary]) -> void:
 		# Percorre cada indice da ação.
 		for action in actions:
 			# Bloqueia a continuação do código se não houver relação entre a ação e o redutor.
-			if not action.get("type") in store[key].get("accept_action"):
-				continue
+			if not action.get("type") in store[key].get("accept_action"): continue
 			
 			# Preparativos para executar a mudança de estado.
 			var current_state: Variant = state.get(key)
@@ -78,7 +75,7 @@ func dispatch(actions: Array[Dictionary]) -> void:
 				# Execução dos ouvintes tipo 01.
 				while running:
 					for listener in store[key].get("listeners"):
-						if listener.get("on") != "load": continue
+						if listener.get("on") != "ready": continue
 						
 						# Finaliza a execução do laço principal.
 						if not listener.get("method").call(changed_state):
@@ -93,7 +90,7 @@ func dispatch(actions: Array[Dictionary]) -> void:
 				# Execução dos ouvintes tipo 02.
 				while running:
 					for listener in store[key].get("listeners"):
-						if listener.get("on") != "ready": continue
+						if listener.get("on") != "load": continue
 						
 						# Finaliza a execução do laço principal.
 						if not listener.get("method").call(changed_state):
@@ -101,8 +98,6 @@ func dispatch(actions: Array[Dictionary]) -> void:
 					
 					# Finaliza o laço while caso não haja problema com a execução dos ouvintes.
 					break
-	
-	#print(changed_state)
 
 # Essa função é usada para cópia de dicionários.
 func shallow_copy(dict: Dictionary) -> Dictionary:
