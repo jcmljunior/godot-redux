@@ -16,7 +16,7 @@ extends Node
 				CounterConstants.INCREMENT_COUNTER,
 			],
 			"method": CounterMiddlewares.show_increment_counter,
-			"on": "load",
+			"on": Store.ListenerEventMode.ON_LOAD,
 		},
 		{
 			"type":
@@ -24,7 +24,7 @@ extends Node
 				CounterConstants.DECREMENT_COUNTER,
 			],
 			"method": CounterMiddlewares.lock_decrement_counter,
-			"on": "ready",
+			"on": Store.ListenerEventMode.ON_READY,
 		},
 		{
 			"type":
@@ -32,7 +32,7 @@ extends Node
 				CounterConstants.DECREMENT_COUNTER,
 			],
 			"method": CounterMiddlewares.show_decrement_counter,
-			"on": "load",
+			"on": Store.ListenerEventMode.ON_LOAD,
 		},
 	],
 }

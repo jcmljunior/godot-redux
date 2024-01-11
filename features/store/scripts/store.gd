@@ -5,11 +5,6 @@ enum ListenerEventMode {
 	ON_LOAD,
 }
 
-enum ListenerConnectMode {
-	CONNECT_PERSIST,
-	CONNECT_ONE_SHOT,
-}
-
 
 var instance: Callable = func() -> Dictionary:
 	var state: Dictionary = {}
@@ -91,7 +86,7 @@ var instance: Callable = func() -> Dictionary:
 						response = func(): state[key] = shallow_merge(next_state, current_state)
 					
 					for listener in store.get(key).get("listeners"):
-						if not action.get("type") in listener.get("type") or listener.get("on") == "load":
+						if not action.get("type") in listener.get("type") or int(listener.get("on")) == Store.ListenerEventMode.ON_LOAD:
 							continue
 						
 						if not listener.get("method").callv(changed_state):
@@ -101,7 +96,7 @@ var instance: Callable = func() -> Dictionary:
 					
 					#...
 					for listener in store.get(key).get("listeners"):
-						if not action.get("type") in listener.get("type") or not listener.get("on") != "ready":
+						if not action.get("type") in listener.get("type") or not int(listener.get("on")) != Store.ListenerEventMode.ON_READY:
 							continue
 
 						if not listener.get("method").callv(changed_state):
