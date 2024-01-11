@@ -21,14 +21,9 @@ config/icon="res://icon.svg"
 Store="*res://features/store/scripts/store.gd"
 CounterConstants="*res://features/counter/constants/counter_constants.gd"
 CounterActions="*res://features/counter/actions/counter_actions.gd"
-CounterReducers="*res://features/counter/reducers/counter_reducer.gd"
+CounterReducer="*res://features/counter/reducers/counter_reducer.gd"
 CounterMiddlewares="*res://features/counter/middlewares/counter_middlewares.gd"
-PlayerConstants="*res://features/player/constants/player_constants.gd"
-PlayerActions="*res://features/player/actions/player_actions.gd"
-PlayerReducers="*res://features/player/reducers/player_reducers.gd"
-PlayerMiddlewares="*res://features/player/middlewares/player_middlewares.gd"
-PlayerUtils="*res://features/player/scripts/player_utils.gd"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+enabled=PackedStringArray("res://addons/format_on_save/plugin.cfg", "res://addons/gut/plugin.cfg")
