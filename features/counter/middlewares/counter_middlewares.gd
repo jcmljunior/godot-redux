@@ -1,27 +1,34 @@
 extends Node
 
-func show_increment_counter(state: Array) -> bool:
-	var initial_state: Variant = state[0][0]
-	var next_state: Variant = state[0][1]
-	
-	print("A função increment_counter foi executada modificando o estado de: %a para: %b.".replace("%a", str(initial_state)).replace("%b", str(next_state)))
-	
+
+func show_increment_counter(current_state: int, next_state: int) -> bool:
+	print(
+		(
+			"A função %s foi executada modificando o estado de: %s para: %s."
+			% ["increment_counter", current_state, next_state]
+		)
+	)
+
 	return true
 
-func show_decrement_counter(state: Array) -> bool:
-	var initial_state: Variant = state[0][0]
-	var next_state: Variant = state[0][1]
-	
-	print("A função decrement_counter foi executada modificando o estado de: %a para: %b.".replace("%a", str(initial_state)).replace("%b", str(next_state)))
-	
+
+func show_decrement_counter(current_state: int, next_state: int) -> bool:
+	print(
+		(
+			"A função %s foi executada modificando o estado de: %s para: %s."
+			% ["decrement_counter", current_state, next_state]
+		)
+	)
+
 	return true
 
-func lock_decrement_counter(state: Array) -> bool:
-	var next_state: Variant = state[0][1]
-	
+
+# Bloqueia a subtração do contador se o estado atual for 0.
+func lock_decrement_counter(_current_state: int, next_state: int) -> bool:
 	if next_state < 0:
-		print("A função decrement_counter foi executada mas sua modificação de estado foi bloqueada por um middleware.")
-		
+		print(
+			"A função decrement_counter foi executada mas a sua ação foi bloqueada por um método ouvinte."
+		)
 		return false
-		
+
 	return true

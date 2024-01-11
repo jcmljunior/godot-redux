@@ -1,4 +1,0 @@
-extends Node
-
-const PLAYER_SET_NAME := "PLAYER_SET_NAME"
-const PLAYER_SET_AGE := "PLAYER_SET_AGE"
