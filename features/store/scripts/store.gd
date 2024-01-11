@@ -5,8 +5,7 @@ enum ListenerEventMode {
 	ON_LOAD,
 }
 
-
-var instance: Callable = func() -> Dictionary:
+func get_instance() -> Dictionary:
 	var state: Dictionary = {}
 	var store: Dictionary = {}
 	var changed_state: Array = []
@@ -52,16 +51,16 @@ var instance: Callable = func() -> Dictionary:
 					if not "accept_action" in store[key]:
 						continue
 					
+					# ...
+					if not action.get("type") in store.get(key).get("accept_action"):
+						continue
+					
 					var current_state: Variant = state.get(key)
 					var next_state: Variant = store[key].get("method").call(current_state, action)
-					
-					#print(current_state)
-					#print(next_state)
 					
 					# Finaliza o laço segundário caso não haja mudança de estado a ser computada.
 					if str(current_state) == str(next_state):
 						break
-					
 					
 					if not typeof(next_state) == TYPE_DICTIONARY:
 						changed_state.append_array([
@@ -76,12 +75,9 @@ var instance: Callable = func() -> Dictionary:
 							if next_state[index] == current_state[index]:
 								continue
 							
-							changed_state.append({
-								index: [
-									current_state,
-									next_state,
-								]
-							})
+							changed_state.append_array([
+								current_state, next_state
+							])
 					
 						response = func(): state[key] = shallow_merge(next_state, current_state)
 					
@@ -101,8 +97,6 @@ var instance: Callable = func() -> Dictionary:
 
 						if not listener.get("method").callv(changed_state):
 							return
-			
-			#print(changed_state)
 			
 			# Retorna a instancia com acesso as funções.
 			return self.get_instance(),
@@ -126,11 +120,9 @@ var instance: Callable = func() -> Dictionary:
 			return self.instance.call(),
 		
 		"get_state": state,
+		
+		"get_store": store,
 	}
-
-
-func get_instance() -> Dictionary:
-	return instance.call()
 
 # Essa função é usada para cópia de dicionários.
 func shallow_copy(dict: Dictionary) -> Dictionary:
