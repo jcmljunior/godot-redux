@@ -5,27 +5,33 @@ enum ListenerEventMode {
 	ON_LOAD,
 }
 
-func get_instance() -> Dictionary:
+enum ListenerDispatchMode {
+	ONE_SHOT,
+	PERSIST,
+}
+
+
+var defaults = func() -> Dictionary:
 	var state: Dictionary = {}
 	var store: Dictionary = {}
-	var changed_state: Array = []
 	var response: Callable
+	var changed_state: Array = []
 	
 	return {
-		"register": func(initial_setup: Dictionary) -> Variant:
+		
+		# A função "register" define em escala global, o acesso as definições dos redutores.
+		"register": func(config: Dictionary) -> void:
 			# Validações com requisitos minimos para execução da função.
-			if not "state" in initial_setup:
+			if not "state" in config:
 				printerr("Oppss, o estado inicial não foi encontrado.")
 				return
 				
-			if not "method" in initial_setup:
+			if not "method" in config:
 				printerr("Oppss, o redutor não foi encontrado.")
 				return
-				
-			# Captura a nomeclatura do redutor para referência-lo como uma chave state/store.
-			@warning_ignore("shadowed_variable_base_class")
-			var name: String = initial_setup.get("method").get_method()
-			var key: String = name.substr(0, name.rfind("_"))
+			
+			# Define a chave de referência ao state/store.
+			var key: String = config.get("name")
 			
 			# Validação de existencia de chave em state/store.
 			if key in state or key in store:
@@ -33,105 +39,126 @@ func get_instance() -> Dictionary:
 				return
 			
 			# Inicialização de state/store.
-			store[key] = initial_setup
-			state[key] = initial_setup.get("method").call(initial_setup.get("state"), {})
-			
-			# Retorna a instancia com acesso as funções.
-			return self.get_instance(),
+			store[key] = config
+			state[key] = config.get("method").call(config.get("state"), {}),
 		
-		"dispatch": func(actions: Array) -> Variant:
+		# A função "dispatch" interpreta ações do usuário para definir o estado global.
+		"dispatch": func(actions: Array[Dictionary]) -> void:
+			
+			# Bloqueia a continuidade do código se não houver ações a serem percorridas.
+			if not actions.size():
+				return
+			
 			# Redefinição de estado modificados.
+			# Suporte a combinações de redutores com injeção de dependencias.
 			changed_state = []
 			
-			# Percorre as ações.
-			for action: Dictionary in actions:
-				# Percorre os redutores.
+			# Percorre as ações do usuário.
+			for action in actions:
+				# Percorre os  redutores.
 				for key in store.keys():
 					# Ignora o indice caso não haja relação com a ação.
 					if not "accept_action" in store[key]:
 						continue
 					
-					# ...
+					# Validação da relação entre a ação e o redutor.
 					if not action.get("type") in store.get(key).get("accept_action"):
 						continue
-					
+						
+					# Execução do redutor.
 					var current_state: Variant = state.get(key)
 					var next_state: Variant = store[key].get("method").call(current_state, action)
 					
-					# Finaliza o laço segundário caso não haja mudança de estado a ser computada.
+					# Validação das execuções dos modificadores.
+					# Importante manter a formatação dos valores retornado como string para evitar problemas com os operadores.
 					if str(current_state) == str(next_state):
-						break
-					
-					if not typeof(next_state) == TYPE_DICTIONARY:
-						changed_state.append_array([
-							current_state,
-							next_state,
-						])
+						continue
 						
-						response = func(): state[key] = next_state
-					
-					if typeof(next_state) == TYPE_DICTIONARY:
-						for index in next_state:
-							if next_state[index] == current_state[index]:
+					match action.get("type"):
+						
+						# Lida com o estado do tipo dicionário.
+						TYPE_DICTIONARY:
+							
+							# Percorre todos os indices para estabelecer quais objetos foram modificados.
+							for index in next_state:
+								# Ignora os elementos que não receberam mudanças.
+								# Importante por causa da mesclagem de objetos.
+								if next_state[index] == current_state[index]:
+									continue
+								
+								# Registra quais valores ocorreu modificação.
+								changed_state.append_array([
+									current_state,
+									next_state,
+								])
+							
+							# Define a mudança de estado.
+							response = func(): state[key] = StoreCollections.shallow_merge(next_state, current_state)
+							
+						_:
+							changed_state.append_array([
+								current_state,
+								next_state
+							])
+							
+							# Define a mudança de estado.
+							response = func(): state[key] = next_state
+			
+					# ListenerOnLoadEventHandler
+					if store.get(key).get("listeners").size():
+						# Percorre a lista de métodos observaveis.
+						for listener in store.get(key).get("listeners"):
+							
+							# Validação de tipos de ouvintes.
+							if not action.get("type") in listener.get("type") or int(listener.get("on")) == Store.ListenerEventMode.ON_LOAD:
 								continue
 							
-							changed_state.append_array([
-								current_state, next_state
-							])
-					
-						response = func(): state[key] = shallow_merge(next_state, current_state)
-					
-					for listener in store.get(key).get("listeners"):
-						if not action.get("type") in listener.get("type") or int(listener.get("on")) == Store.ListenerEventMode.ON_LOAD:
-							continue
-						
-						if not listener.get("method").callv(changed_state):
-							return
-					
+							# Bloqueia a execução da ação se houver resposta negativa.
+							if not listener.get("method").callv(changed_state):
+								return
+								
+							# ListenerDispatchMode
+							#if listener.get("dispatch_mode") == ListenerDispatchMode.ONE_SHOT:
+								#store.get(key).get("listeners").remove_at(index)
+			
+					# Executa a mudança de estado.
 					response.call()
-					
-					#...
-					for listener in store.get(key).get("listeners"):
-						if not action.get("type") in listener.get("type") or not int(listener.get("on")) != Store.ListenerEventMode.ON_READY:
-							continue
-
-						if not listener.get("method").callv(changed_state):
-							return
 			
-			# Retorna a instancia com acesso as funções.
-			return self.get_instance(),
-		
-		"add_listener": func(key: String, type: Array, method: Callable, on: String) -> void:
-			store.get(key).get("listeners").append({
-				"type": type,
-				"method": method,
-				"on": on
-			}),
+					#ListenerOnReadyEventHandler
+					if store.get(key).get("listeners").size():
+						
+						# Percorre a lista de métodos observaveis.
+						for listener in store.get(key).get("listeners"):
+							
+							# Validação de tipos de ouvintes.
+							if not action.get("type") in listener.get("type") or not int(listener.get("on")) != Store.ListenerEventMode.ON_READY:
+								continue
+							
+							# Bloqueia a execução da ação se houver resposta negativa.
+							if not listener.get("method").callv(changed_state):
+								return
+								
+							# ListenerDispatchMode
+							#if listener.get("dispatch_mode") == ListenerDispatchMode.ONE_SHOT:
+								#store.get(key).get("listeners").remove_at(index)
 			
-		"remove_listener": func(method: Callable) -> void:
-			for i in store.keys():
-				for ii in range(store.get(i).get("listeners").size()):
-					if not store.get(i).get("listeners")[ii].get("method").get_method() == method.get_method():
+			pass,
+			
+			"add_listener": func(name: String, type: Array, method: Callable, on: ListenerEventMode = ListenerEventMode.ON_LOAD, dispatch_mode: ListenerDispatchMode = ListenerDispatchMode.PERSIST):
+				store.get(name).get("listeners").append({
+					"type": type,
+					"method": Callable(method),
+					"on": on,
+					"dispatch_mode": dispatch_mode,
+				}),
+				
+			"remove_listener": func(name: String, method: Callable):
+				for index in range(store.get(name).get("listeners").size()):
+					if not store.get(name).get("listeners")[index].get("method").get_method() == method.get_method():
 						continue
 					
-					store.get(i).get("listeners").remove_at(ii),
-		
-		"get_instance": func() -> Dictionary:
-			return self.instance.call(),
-		
-		"get_state": state,
-		
-		"get_store": store,
+					store.get(name).get("listeners").remove_at(index),
 	}
 
-# Essa função é usada para cópia de dicionários.
-func shallow_copy(dict: Dictionary) -> Dictionary:
-	return shallow_merge(dict, {})
-
-
-# Essa função é usada para mesclagem de dicionários.
-func shallow_merge(src_dict: Dictionary, dest_dict: Dictionary) -> Dictionary:
-	for i in src_dict.keys():
-		dest_dict[i] = src_dict[i]
-	return dest_dict
-
+func get_instance() -> Dictionary:
+	return defaults.call()
