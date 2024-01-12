@@ -1,188 +1,164 @@
 extends Node
 
-var state: Dictionary = {}
-var store: Dictionary = {}
-var running := true
+enum ListenerEventMode {
+	ON_READY,
+	ON_LOAD,
+}
 
-# Essa função cria um estado global com base em um redutor de estado.
-func create(obj: Dictionary) -> Store:
-	assert("state" in obj, "Oppss, não foi encontrado o estado inicial.")
-	assert(obj.get("state").size() == 1, "Oppss, foram declarados mais de uma chave de estado global.")
-
-	# Obtem a chave de refêrencia ao estado global.
-	var key: String = obj.get("state").keys()[0]
-
-	assert(not key in store, "Oppss, a chave %s já encontra-se em uso." % key)
-	assert(not key in state, "Oppss, a chave %s já encontra-se em uso." % key)
-	
-	store[key] = obj
-
-	# Inicialização de estado.
-	state[key] = store.get(key).get("method").call(store.get(key).get("state").get(key), {})
-
-	return self
-
-# Essa função atualiza o estado com base em uma ação.
-func dispatch(action: Dictionary) -> void:
-	# Inicializa a variavel running sempre que uma ação é executada.
-	running = true
-	
-	for key in store.keys():
-		# Executa a validação da relação da ação com o redutor.
-		if not key in action.get("payload"):
-			continue
-		
-		# Executa a validação da autorização de execução do redutor.
-		# Bloqueia a execução do código se as condições necessárias para continuar não for estabelecidas.
-		if not action.get("type") in store.get(key).get("accept_action"):
-			break
-		
-		# Executa uma simulação de modificações de estado.
-		var current_state: Variant = state.get(key)
-		var next_state: Variant = store.get(key).get("method").call(current_state, action)
-		
-		# Validação de estado passivo a modificação.
-		# Bloqueia a execução do código se não houver alterações de estado.
-		if not typeof(current_state) == typeof(next_state) \
-			and current_state == next_state:
-				break
-		
-		# Memoriza as informações de estados modificado.
-		var changed_state: Dictionary = handle_changed_state(key, current_state, next_state)
-		
-		# Inicialização dos middlewares do tipo "ready".
-		if not "middlewares" in store.get(key):
-			break
-		
-		handle_middleware(action, get_middlewares_with_key_value("on", "ready", store.get(key).get("middlewares")), changed_state.values)
-		
-		# Bloqueia a a continuação do laço se a variavel running for falsa.
-		if not running:
-			break
-
-		# Se não houver problemas, registra o novo estado.
-		changed_state.callback.call()
-
-		# Notifica os observadores.
-		if not "listeners" in store.get(key):
-			break
-
-		handle_listeners(key)
-
-		# Inicialização dos middlewares do tipo "load".
-		handle_middleware(action, get_middlewares_with_key_value("on", "load", store.get(key).get("middlewares")), changed_state.values)
-		
-		# Bloqueia a a continuação do laço se a variavel running for falsa.
-		if not running:
-			break
-		
-		# Finaliza o laço for.
-		break
-
-# Inscrição para ouvir modificações de estado.
-func subscribe(key: String, method: Callable, connect_type: ConnectFlags) -> Store:
-	assert(key in store, "Oppss, a chave %s não foi encontrada." % key)
-	assert("listeners" in store.get(key), "Oppss, a chave listeners não foi encontrada.")
-	
-	store.get(key).get("listeners").append([
-		str(method).split("::")[1],
-		StoreUtils.new(method, connect_type)
-	])
-	
-	return self
-
-# Remoção da escuta das modificações de estado.
-func unsubscribe(key: String, method: Callable) -> Store:
-	var method_name := str(method).split("::")[1]
-	
-	for index in range(store.get(key).get("listeners").size()):
-		if store.get(key).get("listeners")[index][0] != method_name:
-			continue
-
-		store.get(key).get("listeners").pop_at(index)
-		
-		# Finaliza o laço.
-		break
-	
-	return self
-
-# Esta função classifica os middlewares com base no valor de uma chave específica.
-func get_middlewares_with_key_value(key: String, value: String, data: Array) -> Array:
-	var response: Array = []
-
-	for index in range(data.size()):
-		if data[index].get(key) != value:
-			continue
-
-		response.append(data[index])
-
-	return response
-
-# Inicialização dos middlewares.
-func handle_middleware(action: Dictionary, resources: Array, changed_state: Array):
-	for middleware in resources:
-		if middleware.get("type") != action.get("type"):
-			continue
-		
-		# Executa o middleware e se a resposta não for verdadeira, bloqueia a continuação do código.
-		if not middleware.get("method").call(changed_state):
-			running = false
-			break
-
-# Notifica os observadores relacionados a chave.
-func handle_listeners(key: String):
-	for index in range(store.get(key).get("listeners").size()):
-		store.get(key).get("listeners")[index][1].input_event_handler.emit()
+enum ListenerDispatchMode {
+	ONE_SHOT,
+	PERSIST,
+}
 
 
-# Memoriza as informações de estados modificado.
-func handle_changed_state(key: String, current_state: Variant, next_state: Variant) -> Dictionary:
-	var changed_state: Array = []
+var defaults = func() -> Dictionary:
+	var state: Dictionary = {}
+	var store: Dictionary = {}
 	var response: Callable
-	
-	match(typeof(next_state)):
-		TYPE_DICTIONARY:
-			for index in next_state:
-				if not index in current_state and \
-					next_state[index] == current_state[index]:
-						continue
-
-				changed_state.append([
-					current_state[index],
-					next_state[index],
-				])
-			
-			# Registra as modificações no estado.
-			response = func() -> void:
-				state[key] = shallow_merge(next_state, current_state)
-		
-		_:
-			changed_state.append([
-				current_state,
-				next_state,
-			])
-			
-			response = func() -> void:
-				state[key] = next_state
+	var changed_state: Array = []
 	
 	return {
-		"values": changed_state,
-		"callback": response,
+		
+		# A função "register" define em escala global, o acesso as definições dos redutores.
+		"register": func(config: Dictionary) -> void:
+			# Validações com requisitos minimos para execução da função.
+			if not "state" in config:
+				printerr("Oppss, o estado inicial não foi encontrado.")
+				return
+				
+			if not "method" in config:
+				printerr("Oppss, o redutor não foi encontrado.")
+				return
+			
+			# Define a chave de referência ao state/store.
+			var key: String = config.get("name")
+			
+			# Validação de existencia de chave em state/store.
+			if key in state or key in store:
+				printerr("Oppss, a chave %s já existe." % key)
+				return
+			
+			# Inicialização de state/store.
+			store[key] = config
+			state[key] = config.get("method").call(config.get("state"), {}),
+		
+		# A função "dispatch" interpreta ações do usuário para definir o estado global.
+		"dispatch": func(actions: Array[Dictionary]) -> void:
+			
+			# Bloqueia a continuidade do código se não houver ações a serem percorridas.
+			if not actions.size():
+				return
+			
+			# Redefinição de estado modificados.
+			# Suporte a combinações de redutores com injeção de dependencias.
+			changed_state = []
+			
+			# Percorre as ações do usuário.
+			for action in actions:
+				# Percorre os  redutores.
+				for key in store.keys():
+					# Ignora o indice caso não haja relação com a ação.
+					if not "accept_action" in store[key]:
+						continue
+					
+					# Validação da relação entre a ação e o redutor.
+					if not action.get("type") in store.get(key).get("accept_action"):
+						continue
+						
+					# Execução do redutor.
+					var current_state: Variant = state.get(key)
+					var next_state: Variant = store[key].get("method").call(current_state, action)
+					
+					# Validação das execuções dos modificadores.
+					# Importante manter a formatação dos valores retornado como string para evitar problemas com os operadores.
+					if str(current_state) == str(next_state):
+						continue
+						
+					match action.get("type"):
+						
+						# Lida com o estado do tipo dicionário.
+						TYPE_DICTIONARY:
+							
+							# Percorre todos os indices para estabelecer quais objetos foram modificados.
+							for index in next_state:
+								# Ignora os elementos que não receberam mudanças.
+								# Importante por causa da mesclagem de objetos.
+								if next_state[index] == current_state[index]:
+									continue
+								
+								# Registra quais valores ocorreu modificação.
+								changed_state.append_array([
+									current_state,
+									next_state,
+								])
+							
+							# Define a mudança de estado.
+							response = func(): state[key] = StoreCollections.shallow_merge(next_state, current_state)
+							
+						_:
+							changed_state.append_array([
+								current_state,
+								next_state
+							])
+							
+							# Define a mudança de estado.
+							response = func(): state[key] = next_state
+			
+					# ListenerOnLoadEventHandler
+					if store.get(key).get("listeners").size():
+						# Percorre a lista de métodos observaveis.
+						for listener in store.get(key).get("listeners"):
+							
+							# Validação de tipos de ouvintes.
+							if not action.get("type") in listener.get("type") or int(listener.get("on")) == Store.ListenerEventMode.ON_LOAD:
+								continue
+							
+							# Bloqueia a execução da ação se houver resposta negativa.
+							if not listener.get("method").callv(changed_state):
+								return
+								
+							# ListenerDispatchMode
+							#if listener.get("dispatch_mode") == ListenerDispatchMode.ONE_SHOT:
+								#store.get(key).get("listeners").remove_at(index)
+			
+					# Executa a mudança de estado.
+					response.call()
+			
+					#ListenerOnReadyEventHandler
+					if store.get(key).get("listeners").size():
+						
+						# Percorre a lista de métodos observaveis.
+						for listener in store.get(key).get("listeners"):
+							
+							# Validação de tipos de ouvintes.
+							if not action.get("type") in listener.get("type") or not int(listener.get("on")) != Store.ListenerEventMode.ON_READY:
+								continue
+							
+							# Bloqueia a execução da ação se houver resposta negativa.
+							if not listener.get("method").callv(changed_state):
+								return
+								
+							# ListenerDispatchMode
+							#if listener.get("dispatch_mode") == ListenerDispatchMode.ONE_SHOT:
+								#store.get(key).get("listeners").remove_at(index)
+			
+			pass,
+			
+			"add_listener": func(name: String, type: Array, method: Callable, on: ListenerEventMode = ListenerEventMode.ON_LOAD, dispatch_mode: ListenerDispatchMode = ListenerDispatchMode.PERSIST):
+				store.get(name).get("listeners").append({
+					"type": type,
+					"method": Callable(method),
+					"on": on,
+					"dispatch_mode": dispatch_mode,
+				}),
+				
+			"remove_listener": func(name: String, method: Callable):
+				for index in range(store.get(name).get("listeners").size()):
+					if not store.get(name).get("listeners")[index].get("method").get_method() == method.get_method():
+						continue
+					
+					store.get(name).get("listeners").remove_at(index),
 	}
 
-# Esta função recupera um valor associado a uma chave específica no state
-func get_entry_on_state(key: String) -> Variant:
-	assert(state.has(key), "Oppss, a chave %s não foi encontrada no escopo do objeto state." % key)
-	return state.get(key)
-
-
-# Essa função é usada para cópia de dicionários.
-func shallow_copy(dict: Dictionary) -> Dictionary:
-	return shallow_merge(dict, {})
-
-
-# Essa função é usada para mesclagem de dicionários.
-func shallow_merge(src_dict: Dictionary, dest_dict: Dictionary) -> Dictionary:
-	for i in src_dict.keys():
-		dest_dict[i] = src_dict[i]
-	return dest_dict
+func get_instance() -> Dictionary:
+	return defaults.call()

@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://dd8kd7qjv6bfd"]
+
+[ext_resource type="Script" path="res://features/stages/scripts/stage1.gd" id="1_rtxyx"]
+[ext_resource type="PackedScene" uid="uid://cj1nlaqnuafif" path="res://features/counter/scenes/counter.tscn" id="2_6lj3i"]
+
+[node name="Stage1" type="Node"]
+script = ExtResource("1_rtxyx")
+
+[node name="Counter" parent="." instance=ExtResource("2_6lj3i")]
+
+[connection signal="pressed" from="Counter/MarginContainer/TabContainer/Contador/VBoxContainer/HBoxContainer/IncrementButton" to="." method="_on_increment_button_pressed"]
+[connection signal="pressed" from="Counter/MarginContainer/TabContainer/Contador/VBoxContainer/HBoxContainer/DecrementButton" to="." method="_on_decrement_button_pressed"]
+
+[editable path="Counter"]
