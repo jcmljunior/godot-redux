@@ -55,6 +55,15 @@ extends Node
 			],
 			"on": Store.ListenerEventMode.ON_LOAD,
 			"dispatch_mode": Store.ListenerDispatchMode.ONE_SHOT,
+		},
+		
+		{
+			"method": CounterMiddlewares.block_counter_when_value_equals_zero,
+			"type": [
+				CounterConstants.DECREMENT_COUNTER,
+			],
+			"on": Store.ListenerEventMode.ON_READY,
+			"dispatch_mode": Store.ListenerDispatchMode.PERSIST,
 		}
 	]
 }

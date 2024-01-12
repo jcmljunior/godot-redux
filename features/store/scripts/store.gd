@@ -11,13 +11,19 @@ enum ListenerDispatchMode {
 }
 
 
-var defaults = func() -> Dictionary:
+var defaults = func(storage: Dictionary) -> Dictionary:
 	var state: Dictionary = {}
 	var store: Dictionary = {}
 	var response: Callable
 	var changed_state: Array = []
 	
+	# Construtor.
+	# Necessário para injeção de dependencias.
+	if "state" in storage: state = storage.get("state")
+	if "store" in storage: store = storage.get("store")
+	
 	return {
+		"changed_state": store,
 		
 		# A função "register" define em escala global, o acesso as definições dos redutores.
 		"register": func(config: Dictionary) -> void:
@@ -74,6 +80,7 @@ var defaults = func() -> Dictionary:
 					if str(current_state) == str(next_state):
 						continue
 					
+					
 					match action.get("type"):
 						
 						# Lida com o estado do tipo dicionário.
@@ -105,17 +112,23 @@ var defaults = func() -> Dictionary:
 							response = func(): state[key] = next_state
 			
 					# ListenerOnLoadEventHandler
-					defaults.get("handle_listener_list").call(key, action, ListenerEventMode.ON_LOAD, changed_state)
-			
+					if not get_instance({
+						"store": store,
+						"state": state,
+					}).get("handle_listener_list").call(key, action, ListenerEventMode.ON_LOAD, changed_state):
+						return
+					
 					# Executa a mudança de estado.
 					response.call()
 			
 					#ListenerOnReadyEventHandler
-					defaults.get("handle_listener_list").call(key, action, ListenerEventMode.ON_READY, changed_state)
+					if not get_instance({
+						"store": store,
+						"state": state,
+					}).get("handle_listener_list").call(key, action, ListenerEventMode.ON_READY, changed_state):
+						return,
 			
-			pass,
-				
-			"handle_listener_list": func(key: String, action: Dictionary, on: int, changed_state: Array):
+			"handle_listener_list": func(key: String, action: Dictionary, on: int, changed_state: Array) -> bool:
 				if store.get(key).get("listeners").size():
 						
 						# Percorre a lista de métodos observaveis.
@@ -129,14 +142,18 @@ var defaults = func() -> Dictionary:
 							
 							# Bloqueia a execução da ação se houver resposta negativa.
 							if not listener.get("method").callv(changed_state):
-								return
+								return false
 								
 							# ListenerDispatchMode
 							if listener.get("dispatch_mode") == ListenerDispatchMode.ONE_SHOT:
 								store.get(key).get("listeners").remove_at(index)
-				pass,
+				
+				return true,
 			
 			"add_listener": func(name: String, type: Array, method: Callable, on: ListenerEventMode = ListenerEventMode.ON_LOAD, dispatch_mode: ListenerDispatchMode = ListenerDispatchMode.PERSIST):
+				if not name in store:
+					return
+				
 				store.get(name).get("listeners").append({
 					"type": type,
 					"method": Callable(method),
@@ -152,6 +169,6 @@ var defaults = func() -> Dictionary:
 					store.get(name).get("listeners").remove_at(index),
 	}
 
-func _init():
-	defaults = defaults.call()
+func get_instance(storage: Dictionary = {}):
+	return defaults.call(storage)
 
