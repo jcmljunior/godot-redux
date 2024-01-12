@@ -1,6 +1,5 @@
 # Godot Redux
 ## Demonstração:
-<video width="560" height="315" controls>
-  <source src="./data/2024-01-12 19-01-35.mp4" type="video/mp4">
-  Seu navegador não suporta a tag de vídeo.
-</video>
+
+https://github.com/jcmljunior/godot-redux/assets/82642883/d0adfe7b-781c-4c99-861b-f3ce4925891e
+
