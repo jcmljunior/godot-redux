@@ -3,7 +3,7 @@ extends Node
 @onready
 var counter_label = $Counter/MarginContainer/TabContainer/Contador/VBoxContainer/CounterLabel
 
-var store = Store.get_instance()
+var store = Store.defaults
 
 
 func _ready():

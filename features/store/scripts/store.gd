@@ -105,33 +105,29 @@ var defaults = func() -> Dictionary:
 							response = func(): state[key] = next_state
 			
 					# ListenerOnLoadEventHandler
-					if store.get(key).get("listeners").size():
-						# Percorre a lista de métodos observaveis.
-						for listener in store.get(key).get("listeners"):
-							
-							# Validação de tipos de ouvintes.
-							if not action.get("type") in listener.get("type") or int(listener.get("on")) == Store.ListenerEventMode.ON_LOAD:
-								continue
-							
-							# Bloqueia a execução da ação se houver resposta negativa.
-							if not listener.get("method").callv(changed_state):
-								return
-								
-							# ListenerDispatchMode
-							#if listener.get("dispatch_mode") == ListenerDispatchMode.ONE_SHOT:
-								#store.get(key).get("listeners").remove_at(index)
+					self.defaults.get("handle_listener_list").call(key, action, ListenerEventMode.ON_LOAD, changed_state)
 			
 					# Executa a mudança de estado.
 					response.call()
 			
 					#ListenerOnReadyEventHandler
-					if store.get(key).get("listeners").size():
+					self.defaults.get("handle_listener_list").call(key, action, ListenerEventMode.ON_READY, changed_state)
+			
+			pass,
+			
+			"changed_state_handler": func():
+				pass,
+				
+			"handle_listener_list": func(key: String, action: Dictionary, on: int, changed_state: Array):
+				if store.get(key).get("listeners").size():
 						
 						# Percorre a lista de métodos observaveis.
-						for listener in store.get(key).get("listeners"):
+						for index in range(store.get(key).get("listeners").size() -1, -1, -1):
+							
+							var listener = store.get(key).get("listeners")[index]
 							
 							# Validação de tipos de ouvintes.
-							if not action.get("type") in listener.get("type") or not int(listener.get("on")) != Store.ListenerEventMode.ON_READY:
+							if not action.get("type") in listener.get("type") or not listener.get("on") != on:
 								continue
 							
 							# Bloqueia a execução da ação se houver resposta negativa.
@@ -139,10 +135,9 @@ var defaults = func() -> Dictionary:
 								return
 								
 							# ListenerDispatchMode
-							#if listener.get("dispatch_mode") == ListenerDispatchMode.ONE_SHOT:
-								#store.get(key).get("listeners").remove_at(index)
-			
-			pass,
+							if listener.get("dispatch_mode") == ListenerDispatchMode.ONE_SHOT:
+								store.get(key).get("listeners").remove_at(index)
+				pass,
 			
 			"add_listener": func(name: String, type: Array, method: Callable, on: ListenerEventMode = ListenerEventMode.ON_LOAD, dispatch_mode: ListenerDispatchMode = ListenerDispatchMode.PERSIST):
 				store.get(name).get("listeners").append({
@@ -160,5 +155,6 @@ var defaults = func() -> Dictionary:
 					store.get(name).get("listeners").remove_at(index),
 	}
 
-func get_instance() -> Dictionary:
-	return defaults.call()
+func _init():
+	defaults = defaults.call()
+
