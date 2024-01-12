@@ -73,7 +73,7 @@ var defaults = func() -> Dictionary:
 					# Importante manter a formatação dos valores retornado como string para evitar problemas com os operadores.
 					if str(current_state) == str(next_state):
 						continue
-						
+					
 					match action.get("type"):
 						
 						# Lida com o estado do tipo dicionário.
@@ -105,18 +105,15 @@ var defaults = func() -> Dictionary:
 							response = func(): state[key] = next_state
 			
 					# ListenerOnLoadEventHandler
-					self.defaults.get("handle_listener_list").call(key, action, ListenerEventMode.ON_LOAD, changed_state)
+					defaults.get("handle_listener_list").call(key, action, ListenerEventMode.ON_LOAD, changed_state)
 			
 					# Executa a mudança de estado.
 					response.call()
 			
 					#ListenerOnReadyEventHandler
-					self.defaults.get("handle_listener_list").call(key, action, ListenerEventMode.ON_READY, changed_state)
+					defaults.get("handle_listener_list").call(key, action, ListenerEventMode.ON_READY, changed_state)
 			
 			pass,
-			
-			"changed_state_handler": func():
-				pass,
 				
 			"handle_listener_list": func(key: String, action: Dictionary, on: int, changed_state: Array):
 				if store.get(key).get("listeners").size():
