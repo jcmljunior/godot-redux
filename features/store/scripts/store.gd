@@ -162,7 +162,7 @@ var defaults = func(storage: Dictionary) -> Dictionary:
 				}),
 				
 			"remove_listener": func(name: String, method: Callable):
-				for index in range(store.get(name).get("listeners").size()):
+				for index in range(store.get(name).get("listeners").size() -1, -1, -1):
 					if not store.get(name).get("listeners")[index].get("method").get_method() == method.get_method():
 						continue
 					
