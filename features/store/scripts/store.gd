@@ -23,8 +23,6 @@ var store = func(storage: Dictionary) -> Dictionary:
 	if "store" in storage: store = storage.get("store")
 	
 	return {
-		"state": state,
-		
 		# A função "register" define em escala global, o acesso as definições dos redutores.
 		"register": func(config: Dictionary) -> void:
 			# Validações com requisitos minimos para execução da função.
