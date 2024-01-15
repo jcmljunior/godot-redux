@@ -48,6 +48,23 @@ var store = func(storage: Dictionary) -> Dictionary:
 			store[key] = config
 			state[key] = config.get("method").call(config.get("state"), {}),
 		
+		"register_singleton": func(name: String, instance: Object):
+			if name in Engine.get_singleton_list():
+				printerr("Oppss, A chave %s já foi definida como um singleton." % name)
+				return
+	
+			Engine.register_singleton(name, instance.new()),
+		
+		"unregister_singleton": func(name: String):
+			if not name in Engine.get_singleton_list():
+				printerr("Oppss, o singleton %s não existe." % name)
+				return
+			
+			Engine.unregister_singleton(name),
+		
+		"get_singleton": func(name: String) -> Object:
+			return Engine.get_singleton(name),
+		
 		# A função "dispatch" interpreta ações do usuário para definir o estado global.
 		"dispatch": func(actions: Array[Dictionary]) -> void:
 			
