@@ -11,7 +11,7 @@ enum ListenerDispatchMode {
 }
 
 
-var defaults = func(storage: Dictionary) -> Dictionary:
+var store = func(storage: Dictionary) -> Dictionary:
 	var state: Dictionary = {}
 	var store: Dictionary = {}
 	var response: Callable
@@ -23,7 +23,7 @@ var defaults = func(storage: Dictionary) -> Dictionary:
 	if "store" in storage: store = storage.get("store")
 	
 	return {
-		"changed_state": store,
+		"state": state,
 		
 		# A função "register" define em escala global, o acesso as definições dos redutores.
 		"register": func(config: Dictionary) -> void:
@@ -65,10 +65,12 @@ var defaults = func(storage: Dictionary) -> Dictionary:
 				for key in store.keys():
 					# Ignora o indice caso não haja relação com a ação.
 					if not "accept_action" in store[key]:
+						printerr("A chave accept_action não existe nas configurações do redutor %s" % key)
 						continue
 					
 					# Validação da relação entre a ação e o redutor.
 					if not action.get("type") in store.get(key).get("accept_action"):
+						printerr("O acesso ao redutor %s não esta autorizado para essa ação: %s." % [key, action.get("type")])
 						continue
 						
 					# Execução do redutor.
@@ -100,7 +102,7 @@ var defaults = func(storage: Dictionary) -> Dictionary:
 								])
 							
 							# Define a mudança de estado.
-							response = func(): state[key] = StoreCollections.shallow_merge(next_state, current_state)
+							response = func(): state[key] = StoreCollections.get("shallow_merge").call(next_state, current_state)
 							
 						_:
 							changed_state.append_array([
@@ -170,5 +172,5 @@ var defaults = func(storage: Dictionary) -> Dictionary:
 	}
 
 func get_instance(storage: Dictionary = {}):
-	return defaults.call(storage)
+	return store.call(storage)
 
